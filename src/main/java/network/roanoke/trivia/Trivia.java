@@ -1,5 +1,10 @@
 package network.roanoke.trivia;
 
+import com.sun.jna.platform.mac.Carbon;
+import net.draycia.carbon.api.CarbonChat;
+import net.draycia.carbon.api.CarbonChatProvider;
+import net.draycia.carbon.api.CarbonServer;
+import net.draycia.carbon.api.event.events.CarbonChatEvent;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -7,6 +12,8 @@ import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.kyori.adventure.platform.fabric.FabricServerAudiences;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import network.roanoke.trivia.Commands.QuizCommands;
@@ -15,7 +22,10 @@ import network.roanoke.trivia.Utils.Messages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Trivia implements ModInitializer {
+import java.util.function.Consumer;
+
+public class Trivia implements ModInitializer{
+
     /**
      * Runs the mod initializer.
      */
@@ -29,6 +39,8 @@ public class Trivia implements ModInitializer {
     public Config config = new Config();
     public Integer quizIntervalCounter = 0;
     public Integer quizTimeOutCounter = 0;
+
+
 
     @Override
     public void onInitialize() {
@@ -60,6 +72,16 @@ public class Trivia implements ModInitializer {
 
             }
         });
+        CarbonChat carbon = CarbonChatProvider.carbonChat();
+
+        carbon.eventHandler().subscribe(CarbonChatEvent.class, carbonchat-> {
+            if (quiz.quizInProgress()){
+                if (quiz.isRightAnswer(carbonchat.message().toString())){
+                    LOGGER.info("Trivia question was answered correctly.");
+                    quiz.processQuizWinner((ServerPlayerEntity) carbonchat,  (MinecraftServer)carbonchat.sender());
+                }
+            }
+        });
 
         ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> {
             if (quiz.quizInProgress()) {
@@ -75,5 +97,6 @@ public class Trivia implements ModInitializer {
     public static Trivia getInstance() {
         return instance;
     }
+
 
 }
