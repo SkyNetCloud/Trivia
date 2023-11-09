@@ -6,6 +6,7 @@ import net.draycia.carbon.api.CarbonChatProvider;
 import net.draycia.carbon.api.CarbonServer;
 import net.draycia.carbon.api.event.events.CarbonChatEvent;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
@@ -16,6 +17,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import network.roanoke.trivia.Commands.QuizCommands;
 import network.roanoke.trivia.Quiz.QuizManager;
 import network.roanoke.trivia.Utils.Messages;
@@ -25,6 +27,8 @@ import org.slf4j.LoggerFactory;
 import java.util.function.Consumer;
 
 public class Trivia implements ModInitializer{
+
+    public static final Identifier TRIVIA = new Identifier("trivia", "text");
 
     /**
      * Runs the mod initializer.
@@ -72,25 +76,17 @@ public class Trivia implements ModInitializer{
 
             }
         });
-        CarbonChat carbon = CarbonChatProvider.carbonChat();
 
-        carbon.eventHandler().subscribe(CarbonChatEvent.class, carbonchat-> {
-            if (quiz.quizInProgress()){
-                if (quiz.isRightAnswer(carbonchat.message().toString())){
-                    LOGGER.info("Trivia question was answered correctly.");
-                    quiz.processQuizWinner((ServerPlayerEntity) carbonchat,  (MinecraftServer)carbonchat.sender());
-                }
-            }
-        });
-
-        ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> {
+        ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {
             if (quiz.quizInProgress()) {
                 if (quiz.isRightAnswer(message.getContent().getString())) {
                     LOGGER.info("Trivia question was answered correctly.");
                     quiz.processQuizWinner(sender, sender.server);}
             }
+            return true;
         });
 
+        ServerMessageEvents.ALLOW_CHAT_MESSAGE.addPhaseOrdering(TRIVIA,Event.DEFAULT_PHASE);
 
     }
 
